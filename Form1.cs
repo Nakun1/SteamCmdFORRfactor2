@@ -19,15 +19,18 @@ namespace InstallPackageRF2
         /// Executes a shell command synchronously.
         /// </summary>
         /// <param name="command">string command</param>
+        /// <param name="keepWindowOpen">si vrai, la fenêtre cmd reste ouverte après l'exécution (utilise /k au lieu de /c)</param>
         /// <remarks>Trouvé ici: https://stackoverflow.com/a/59235057</remarks>
         /// <returns>string, as output of the command.</returns>
-        private static void ExecuteCommandSync(object command)
+        private static void ExecuteCommandSync(object command, bool keepWindowOpen = false)
         {
             try
             {
                 // create the ProcessStartInfo using "cmd" as the program to be run, and "/c " as the parameters.
                 // Incidentally, /c tells cmd that we want it to execute the command that follows, and then exit.
-                System.Diagnostics.ProcessStartInfo procStartInfo = new System.Diagnostics.ProcessStartInfo("cmd", "/c " + command);
+                // /k garde la fenêtre ouverte pour laisser la sortie visible.
+                string switchArg = keepWindowOpen ? "/k " : "/c ";
+                System.Diagnostics.ProcessStartInfo procStartInfo = new System.Diagnostics.ProcessStartInfo("cmd", switchArg + command);
                 // The following commands are needed to redirect the standard output. 
                 //This means that it will be redirected to the Process.StandardOutput StreamReader.
                 procStartInfo.RedirectStandardOutput = false;
@@ -38,7 +41,12 @@ namespace InstallPackageRF2
                 System.Diagnostics.Process proc = new System.Diagnostics.Process();
                 proc.StartInfo = procStartInfo;
                 proc.Start();
-                proc.WaitForExit();
+
+                // Si la fenêtre doit rester ouverte (/k), on ne bloque pas l'UI en attendant sa fermeture.
+                if (!keepWindowOpen)
+                {
+                    proc.WaitForExit();
+                }
 
                 //// Get the output into a string
                 //string result = proc.StandardOutput.ReadToEnd();
@@ -58,9 +66,9 @@ namespace InstallPackageRF2
             try
             {
                 string path = '"' + Environment.CurrentDirectory + @"\steamcmd.exe" + '"';
-                string cmd = path + @" +login anonymous +force_install_dir ../rFactor2-Dedicated +app_update 400300 +quit";
-                this.txtDebug.Text = cmd;
-                ExecuteCommandSync(cmd);
+                string cmd = path + @" +force_install_dir ../rFactor2-Dedicated +login anonymous +app_update 400300 +quit";
+                //this.txtDebug.Text = cmd;
+                ExecuteCommandSync(cmd, keepWindowOpen: true);
             }
             catch (Exception ex)
             {
@@ -93,7 +101,7 @@ namespace InstallPackageRF2
                     string cmd = pathSteamcmd + " +login anonymous +workshop_download_item 365960 " + idMod + " +quit";
                     ExecuteCommandSync(cmd);
 
-                    this.txtDebug.Text = cmd;
+                    //this.txtDebug.Text = cmd;
 
                     string pathMod =  Environment.CurrentDirectory + @"\steamapps\workshop\content\365960\" + idMod ;
                     string pathPackage = this.PathRFactor + @"\Packages\";
